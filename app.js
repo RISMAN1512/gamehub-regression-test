@@ -6,8 +6,6 @@ const routes = require("./routes");
 
 const app = express();
 
-app.set("trust proxy", 1); // ← Tambahan baru, penting untuk Railway
-
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
