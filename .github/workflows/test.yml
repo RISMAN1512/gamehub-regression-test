@@ -1,0 +1,79 @@
+name: Regression Test Suite
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: gamehub_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Wait for MySQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+          until mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; do
+            echo "Waiting for MySQL..."
+            sleep 3
+          done
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Run regression tests
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          PORT: 5000
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: gamehub_test
+          DB_USER: root
+          DB_PASS: root
+          DB_PASSWORD: root
+          JWT_SECRET: gamehub_test_secret
+          JWT_EXPIRES: 1d
+          JWT_EXPIRES_IN: 1d
+        run: npm test
+
+      - name: Run coverage test
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          PORT: 5000
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: gamehub_test
+          DB_USER: root
+          DB_PASS: root
+          DB_PASSWORD: root
+          JWT_SECRET: gamehub_test_secret
+          JWT_EXPIRES: 1d
+          JWT_EXPIRES_IN: 1d
+        run: npm run test:coverage
