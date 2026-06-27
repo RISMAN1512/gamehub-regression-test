@@ -1,6 +1,5 @@
 const { Tournament, Team, User } = require("../models");
 
-// ── GET ALL TOURNAMENTS ───────────────────────────────────────
 const getAll = async (req, res) => {
   try {
     const { game, status } = req.query;
@@ -19,7 +18,6 @@ const getAll = async (req, res) => {
   }
 };
 
-// ── GET ONE TOURNAMENT ────────────────────────────────────────
 const getOne = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id, {
@@ -40,14 +38,11 @@ const getOne = async (req, res) => {
   }
 };
 
-// ── CREATE TOURNAMENT (admin) ─────────────────────────────────
 const create = async (req, res) => {
   try {
     const { nama, game, format, max_tim, tanggal_mulai, deskripsi } = req.body;
     if (!nama || !game || !format || !tanggal_mulai) {
-      return res
-        .status(400)
-        .json({ message: "Field wajib tidak boleh kosong." });
+      return res.status(400).json({ message: "Field wajib tidak boleh kosong." });
     }
     const tournament = await Tournament.create({
       nama,
@@ -59,30 +54,42 @@ const create = async (req, res) => {
       deskripsi,
       created_by: req.user.id,
     });
-    return res
-      .status(201)
-      .json({ message: "Turnamen berhasil dibuat!", tournament });
+    return res.status(201).json({ message: "Turnamen berhasil dibuat!", tournament });
   } catch (err) {
     return res.status(500).json({ message: "Terjadi kesalahan server." });
   }
 };
 
-// ── UPDATE TOURNAMENT (admin) ─────────────────────────────────
 const update = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
     if (!tournament)
       return res.status(404).json({ message: "Turnamen tidak ditemukan." });
-    await tournament.update(req.body);
-    return res
-      .status(200)
-      .json({ message: "Turnamen berhasil diperbarui.", tournament });
+
+    // FIX BUG-GAMEHUB-03: Whitelist field — cegah mass assignment
+    const {
+      nama, game, format, max_tim,
+      tanggal_mulai, tanggal_selesai,
+      status, deskripsi
+    } = req.body;
+
+    const allowedFields = {
+      nama, game, format, max_tim,
+      tanggal_mulai, tanggal_selesai,
+      status, deskripsi
+    };
+
+    Object.keys(allowedFields).forEach(
+      (key) => allowedFields[key] === undefined && delete allowedFields[key]
+    );
+
+    await tournament.update(allowedFields);
+    return res.status(200).json({ message: "Turnamen berhasil diperbarui.", tournament });
   } catch (err) {
     return res.status(500).json({ message: "Terjadi kesalahan server." });
   }
 };
 
-// ── DELETE TOURNAMENT (admin) ─────────────────────────────────
 const remove = async (req, res) => {
   try {
     const tournament = await Tournament.findByPk(req.params.id);
